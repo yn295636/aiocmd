@@ -32,12 +32,12 @@ class PromptToolkitCmd:
         - do_<action> - This will add the "<action>" command to the cli.
                         The method may receive arguments (required) and keyword arguments (optional).
         - _<action>_completions - Returns a custom Completer class to use as a completer for this action.
-    Additionally, the user cant change the "prompt" variable to change how the prompt looks, and add
+    Additionally, the user can change the "prompt" variable to change how the prompt looks, and add
     command aliases to the 'aliases' dict.
     """
     ATTR_START = "do_"
     prompt = "$ "
-    doc_header = "Documented commands:"
+    doc_header = "Commands:"
     aliases = {"?": "help", "exit": "quit"}
 
     def __init__(self, ignore_sigint=True):
@@ -141,31 +141,49 @@ class PromptToolkitCmd:
         return args, kwargs
 
     def _get_command_usage(self, command, args, kwargs):
-        return ("%s %s %s" % (command,
-                              " ".join("<%s>" % arg for arg in args),
-                              " ".join("[%s]" % kwarg for kwarg in kwargs),
-                              )).strip()
+        if command in self.aliases:
+            command = self.aliases[command]
+        names = []
+        for alias in self.aliases:
+            if self.aliases[alias] == command:
+                names.append(alias)
+        names.sort()
+        names.insert(0, command)
+        return ("{} {} {}".format(
+            " | ".join(names),
+            " ".join(f"<{arg}>" for arg in args),
+            " ".join(f"[{kwarg}]" for kwarg in kwargs))
+        ).strip()
 
     @property
     def command_list(self):
+        return self.actual_command_list + list(self.aliases.keys())
+
+    @property
+    def actual_command_list(self):
         return [attr[len(self.ATTR_START):]
-                for attr in dir(self) if attr.startswith(self.ATTR_START)] + list(self.aliases.keys())
+                for attr in dir(self) if attr.startswith(self.ATTR_START)]
 
     def do_help(self):
         print()
         print(self.doc_header)
         print("=" * len(self.doc_header))
-        print()
 
-        get_usage = lambda command: self._get_command_usage(command, *self._get_command_args(command))
+        def get_usage(c):
+            return self._get_command_usage(c, *self._get_command_args(c))
+
         max_usage_len = max([len(get_usage(command)) for command in self.command_list])
-        for command in sorted(self.command_list):
+        for command in sorted(self.actual_command_list):
             command_doc = self._get_command(command).__doc__
             print(("%-" + str(max_usage_len + 2) + "s%s") % (get_usage(command), command_doc or ""))
 
     def do_quit(self):
         """Exit the prompt"""
         raise ExitPromptException()
+
+    def do_history(self):
+        """Print commands history"""
+        print('\n'.join(list(self.session.history.load_history_strings())[::-1]))
 
     def _on_close(self):
         """Optional hook to call on closing the cmd"""
