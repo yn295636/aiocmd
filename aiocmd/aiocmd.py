@@ -150,7 +150,7 @@ class PromptToolkitCmd:
         names.sort()
         names.insert(0, command)
         return ("{} {} {}".format(
-            " | ".join(names),
+            "|".join(names),
             " ".join(f"<{arg}>" for arg in args),
             " ".join(f"[{kwarg}]" for kwarg in kwargs))
         ).strip()
@@ -165,6 +165,7 @@ class PromptToolkitCmd:
                 for attr in dir(self) if attr.startswith(self.ATTR_START)]
 
     def do_help(self):
+        """Print commands usage"""
         print()
         print(self.doc_header)
         print("=" * len(self.doc_header))
