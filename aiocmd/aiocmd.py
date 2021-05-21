@@ -51,7 +51,7 @@ class PromptToolkitCmd:
             asyncio.get_event_loop().add_signal_handler(signal.SIGINT, self._sigint_handler)
         self.session = PromptSession(enable_history_search=True, key_bindings=self._get_bindings())
         try:
-            with patch_stdout():
+            with patch_stdout(raw=True):
                 await self._run_prompt_forever()
         finally:
             if self._ignore_sigint and sys.platform != "win32":
